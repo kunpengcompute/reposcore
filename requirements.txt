@@ -1,1 +1,2 @@
-criticality_score
+criticality_score>=1.0.7
+pbr>=1.3

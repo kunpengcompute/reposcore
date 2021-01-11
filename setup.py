@@ -12,33 +12,7 @@
 """setup.py for Repo Score projects"""
 import setuptools
 
-with open('README.md', 'r') as fh:
-    long_description = fh.read()
 
 setuptools.setup(
-    name='reposcore',
-    version='1.1.0',
-    author='KunpengCompute',
-    author_email='',
-    description='Gives scores for open source projects',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
-    url='https://github.com/kunpengcompute/reposcore',
-    packages=setuptools.find_packages(),
-    classifiers=[
-        'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: OS Independent',
-    ],
-    install_requires=[
-        'criticality_score',
-        'PyGithub>=1.53',
-        'python-gitlab>=2.5.0',
-    ],
-    entry_points={
-        'console_scripts': ['reposcore=reposcore.reposcore:main'],
-    },
-    python_requires='>=3',
-    zip_safe=False,
-)
-
+    setup_requires=['pbr>=1.3'],
+    pbr=True)
