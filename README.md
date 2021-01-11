@@ -14,14 +14,21 @@ export GITHUB_AUTH_TOKEN=<your access token>
 - 如果你还没有，[创建一个Gitlab Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 ,设置环境变量 `GITLAB_AUTH_TOKEN`.
 
-准备工程的url列表文件，一行一个url, 格式可以参考本项目reposcore目录下的projects.txt文件
+准备工程的url列表文件，一行一个url, 格式可以参考本项目的projects.txt文件
 
 ```shell
-pip3 uninstall python-gitlab PyGithub
-pip3 install python-gitlab PyGithub
 git clone https://github.com/kunpengcompute/reposcore
 cd reposcore
-python3 setup.py install
+python3 setup.py install或pip install -e .
+```
+
+通过`python3 setup.py install`的方式安装完成后，会生成demo配置文件`/etc/reposcore/reposcore.conf`。
+
+通过`pip install -e .`方式安装的话，需要手动把本项目`etc`目录的`reposcore.conf`demo文件拷贝到`/etc/reposcore/reposcore.conf`中。
+
+然后执行命令
+
+```shell
 reposcore --projects_list projects_url_file --result_file result.csv
 ```
 
