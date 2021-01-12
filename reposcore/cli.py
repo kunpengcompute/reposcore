@@ -12,6 +12,7 @@
 """Main python script for calculating Repo Score."""
 
 import argparse
+import configparser
 import csv
 import os
 import sys
@@ -22,38 +23,67 @@ from criticality_score import run as cs_run
 
 class RepoScore(object):
     def __init__(self):
-        self.parser = None
-        self.args = None
-        self.retry = 3
+        self.parser = self._create_parser()
+        self.args = self.parser.parse_args()
+        self.config = self._initConfig()
+        self.retry = int(self.config.get('global', 'retry'))
 
-        self.__init_constants()
+        self._init_constants()
 
-    def __init_constants(self):
+    def _init_constants(self):
         # See more constants in:
         # https://github.com/ossf/criticality_score/blob/main/criticality_score/constants.py
-        cs_run.CONTRIBUTOR_COUNT_WEIGHT = 1
-        cs_run.ORG_COUNT_WEIGHT = 0.5
-        cs_run.COMMIT_FREQUENCY_WEIGHT = 4
-        cs_run.COMMENT_FREQUENCY_WEIGHT = 0.5
-        cs_run.DEPENDENTS_COUNT_WEIGHT = 1
+        cs_run.CREATED_SINCE_WEIGHT = float(
+            self.config.get('weight', 'created_since_weight'))
+        cs_run.UPDATED_SINCE_WEIGHT = float(
+            self.config.get('weight', 'updated_since_weight'))
+        cs_run.CONTRIBUTOR_COUNT_WEIGHT = float(
+            self.config.get('weight', 'contributor_count_weight'))
+        cs_run.ORG_COUNT_WEIGHT = float(
+            self.config.get('weight', 'org_count_weight'))
+        cs_run.COMMIT_FREQUENCY_WEIGHT = float(
+            self.config.get('weight', 'commit_frequency_weight'))
+        cs_run.RECENT_RELEASES_WEIGHT = float(
+            self.config.get('weight', 'recent_releases_weight'))
+        cs_run.CLOSED_ISSUES_WEIGHT = float(
+            self.config.get('weight', 'closed_issues_weight'))
+        cs_run.UPDATED_ISSUES_WEIGHT = float(
+            self.config.get('weight', 'updated_issues_weight'))
+        cs_run.COMMENT_FREQUENCY_WEIGHT = float(
+            self.config.get('weight', 'comment_frequency_weight'))
+        cs_run.DEPENDENTS_COUNT_WEIGHT = float(
+            self.config.get('weight', 'dependents_count_weight'))
 
-    def __create_parser(self):
-        self.parser = argparse.ArgumentParser(
+    def _create_parser(self):
+        parser = argparse.ArgumentParser(
             description=
             'Generate a sorted criticality score list for input projects .')
-        self.parser.add_argument("--projects_list",
+        parser.add_argument('-c', dest='config',
+                            help='path to config file')
+        parser.add_argument("--projects_list",
                                  type=open,
                                  required=True,
                                  help="File name of projects url list.")
-        self.parser.add_argument("--result_file",
+        parser.add_argument("--result_file",
                                  type=str,
                                  required=True,
                                  help="Result file name.")
+        return parser
+
+    def _initConfig(self):
+        config = configparser.ConfigParser()
+        if self.args.config:
+            location = self.args.config
+        else:
+            location = '/etc/reposcore/reposcore.conf'
+
+        if os.path.exists(os.path.expanduser(location)):
+            config.read(os.path.expanduser(location))
+            return config
+
+        raise Exception("Unable to locate config file in %s" % location)
 
     def run(self):
-        self.__create_parser()
-        self.args = self.parser.parse_args()
-
         repo_urls = set()
         repo_urls.update(self.args.projects_list.read().splitlines())
 
