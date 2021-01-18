@@ -9,7 +9,9 @@
  
 <!-- DataTables -->
 <script type="text/javascript" charset="utf8" src="https://cdn.bootcdn.net/ajax/libs/datatables/1.10.0/jquery.dataTables.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.staticfile.org/popper.js/1.15.0/umd/popper.min.js"></script>
+  <script src="https://cdn.staticfile.org/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css">
 
@@ -23,6 +25,9 @@ h2 {
     float: left;
     margin: 0 2px;
 
+}
+.form-group {
+  margin: 15 0px
 }
 </style>
 </head>
@@ -49,8 +54,11 @@ h2 {
         </div>
         <div class="modal-body">
           <textarea placeholder="请在此键入需要查询的开源项目Github仓库链接，每行一个" id="projectlist" rows="6" style="min-width: 100%;min-height: 27px;"></textarea>
-        </div>
-        <div class="modal-footer">
+          <div class="form-group">
+            <select class="form-control" id="projectset">
+              <option value="all">选择全部</option>
+            </select>
+          </div>
           <button type="button" class="btn btn-primary center-block" data-dismiss="modal">确认</button>
         </div>
       </div>
@@ -82,7 +90,8 @@ h2 {
 
 </div>
 <script>
-var rawbase = 'https://raw.githubusercontent.com/Yikun/test/master/test.json';
+var rawscore = './score.json';
+var rawproject = './source.json';
 var weight = [
     ['created_since', '1', '第一个commit创建时间'],
     ['updated_since', '-1', '最近commit时间'],
@@ -96,6 +105,7 @@ var weight = [
     ['dependents_count', '1', '在提交记录被提及的次数']
 ]
 var rawdata = []
+var rawsources = {}
 $(document).ready(function() {
     $('#weight').dataTable(
         {
@@ -112,32 +122,44 @@ $(document).ready(function() {
         }
     )
     var dt;
-    $.getJSON(rawbase, function( data ) {
+    $.getJSON(rawscore, function( data ) {
         rawdata = data
         vals = Object.values(data)
         dt = $('#reposcore').dataTable( {
+        "lengthMenu": [[15, 20, 50, -1], [15, 20, 50, "All"]],
         "buttons" : ['copy', 'excel', 'pdf'],
-        "order": [[ 3, "desc" ]],
-        "columnDefs":[{"targets":0,"visible":false}],
+        "order": [[ 13, "desc" ]],
+        "columnDefs":[{"targets":0, "visible":false}],
         "data": vals,
         "columns": [
-            { "title": "仓库", "class": "center"},
             { "title": "项目", "class": "center"},
+            { "title": "仓库", "class": "center"},
             { "title": "语言", "class": "center"},
-            { "title": "score", "class": "center"},
-            { "title": "提交<br>频率", "class": "center" },
+            { "title": "创建<br>时间", "class": "center" },
+            { "title": "更新<br>时间", "class": "center" },
             { "title": "贡献者<br>数目", "class": "center" },
             { "title": "组织<br>数目", "class": "center" },
-            { "title": "最近更新", "class": "center" },
-            { "title": "最近关闭", "class": "center" },
+            { "title": "提交<br>频率", "class": "center" },
             { "title": "最近<br>发布数", "class": "center" },
+            { "title": "最近<br>更新", "class": "center" },
+            { "title": "最近<br>关闭", "class": "center" },
             { "title": "评论<br>频率", "class": "center" },
             { "title": "依赖数", "class": "center" },
-            { "title": "更新<br>时间", "class": "center" },
-            { "title": "创建<br>时间", "class": "center" }
+            { "title": "score", "class": "center"}
         ]
         } );
     });
+
+    $.getJSON(rawproject, function( data ) {
+      rawsources = data
+      keys = Object.keys(data)
+      for(var i in keys){             
+            $("#projectset").append("<option value=" +keys[i]+">" + keys[i] + "</option>")
+      }
+      vals = Object.values(rawsources['project1'])
+      $('#projectlist').val(vals.join('\n')).trigger('input');
+      $("#projectset").val("project1")
+    })
 
     var target = []
     var filter=''
@@ -145,12 +167,12 @@ $(document).ready(function() {
         keywords = []
         var text = $( "#projectlist" ).val();
         if (text=='') {
-          dt.fnFilter(" ", null, true, false, true, true);
+          dt.fnFilter('', 0, true, false, true, false);
         } else {
           text.split('\n').forEach(
             function(v, i) {
               if (v in rawdata){
-                keywords.push(v)
+                keywords.push(v.toLowerCase())
               }
             }
           )
@@ -158,9 +180,21 @@ $(document).ready(function() {
           for (var i=0; i<keywords.length; i++) {
               filter = (filter!=='') ? filter+'|^'+keywords[i] : '^'+keywords[i];
           }
-          dt.fnFilter(filter, null, true, false, true, true);
+          dt.fnFilter(filter, 0, true, false, true, false);
         }
     });
+
+    $('#projectset').change(function(){
+      var opt = $(this).val()
+      if (opt=='all') {
+        $('#projectlist').val('').trigger('input');
+      } else {
+        vals = Object.values(rawsources[opt])
+        $('#projectlist').val(vals.join('\n')).trigger('input');
+      }
+    });
+
+
 } );
 
 </script>
