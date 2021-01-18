@@ -48,7 +48,7 @@ h2 {
           </button>
         </div>
         <div class="modal-body">
-          <textarea placeholder="请在此键入需要查询的开源项目Github仓库链接，每行一个" id="project" rows="6" style="min-width: 100%;min-height: 27px;"></textarea>
+          <textarea placeholder="请在此键入需要查询的开源项目Github仓库链接，每行一个" id="projectlist" rows="6" style="min-width: 100%;min-height: 27px;"></textarea>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-primary center-block" data-dismiss="modal">确认</button>
@@ -117,7 +117,6 @@ $(document).ready(function() {
         vals = Object.values(data)
         dt = $('#reposcore').dataTable( {
         "buttons" : ['copy', 'excel', 'pdf'],
-        "searching" : false,
         "order": [[ 3, "desc" ]],
         "columnDefs":[{"targets":0,"visible":false}],
         "data": vals,
@@ -142,9 +141,9 @@ $(document).ready(function() {
 
     var target = []
     var filter=''
-    $('#project').bind('input',function(){
+    $('#projectlist').bind('input',function(){
         keywords = []
-        var text = $( "#project" ).val();
+        var text = $( "#projectlist" ).val();
         if (text=='') {
           dt.fnFilter(" ", null, true, false, true, true);
         } else {
