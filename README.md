@@ -37,7 +37,7 @@ reposcore --projects_list projects_url_file --result_file result.csv
 ## Project Description 
 Score github or gitlab's projects, based on [criticality_score](https://github.com/ossf/criticality_score), added batch function.
 ## Usage
-Before running, you need to:
+Before running, you need to setup `Access Token` to overcome the [rate-limit of API calling](https://developer.github.com/v3/#rate-limiting):
 
 For GitHub repos, you need to [create a GitHub access token](https://docs.github.com/en/free-pro-team@latest/developers/apps/about-apps#personal-access-tokens) and set it in environment variable `GITHUB_AUTH_TOKEN`. 
 ```shell
@@ -46,14 +46,21 @@ export GITHUB_AUTH_TOKEN=<your access token>
 For GitLab repos, you need to [create a GitLab access token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) and set it in environment variable `GITLAB_AUTH_TOKEN`. 
 
 
-Prepare a projects url file, one url per line, please refer to projects.txt under directory reposcore.
+Prepare a projects url file, one url per line, please refer to projects.txt
 ```shell
-pip3 uninstall python-gitlab PyGithub
-pip3 install python-gitlab PyGithub
 git clone https://github.com/kunpengcompute/reposcore
 cd reposcore
-python3 setup.py install
+python3 setup.py install or pip install -e .
+```
+If installed with `python3 setup.py install` command，there will be a demo configuration file: `/etc/reposcore/reposcore.conf`。
+
+If installed with `pip install -e .` command, you will have to copy the `reposcore.conf` demon configuration file under `/etc/` to `/etc/reposcore/reposcore.conf`
+
+Finally, run:
+
+```shell
 reposcore --projects_list projects_url_file --result_file result.csv
 ```
-The final output is a csv format file.
+
+The output file is in csv format.
 
