@@ -32,7 +32,9 @@ def get_github_auth_token():
             return _CACHED_GITHUB_TOKEN_OBJ
 
     github_auth_token = os.getenv('GITHUB_AUTH_TOKEN')
-    assert github_auth_token, 'GITHUB_AUTH_TOKEN needs to be set.'
+    if not github_auth_token:
+        raise Exception("GITHUB_AUTH_TOKEN needs to be set.")
+
     tokens = github_auth_token.split(',')
 
     min_wait_time = None
@@ -57,6 +59,9 @@ def get_github_auth_token():
 def get_gitlab_auth_token(host):
     """Return a gitlab token object."""
     gitlab_auth_token = os.getenv('GITLAB_AUTH_TOKEN')
+    if not gitlab_auth_token:
+        raise Exception("GITLAB_AUTH_TOKEN needs to be set.")
+
     try:
         token_obj = gitlab.Gitlab(host, gitlab_auth_token)
         token_obj.auth()

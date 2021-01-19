@@ -56,17 +56,21 @@ class RepoScore(object):
         cs_run.DEPENDENTS_COUNT_WEIGHT = float(
             self.config.get('weight', 'dependents_count_weight'))
 
+        cs_run.PARAMS.append("code_line_change_recent_year")
+        cs_run.PARAMS.append("activity_contributor_count_recent_year")
+
+
     def _create_parser(self):
         parser = argparse.ArgumentParser(
             description=
             'Generate a sorted criticality score list for input projects .')
         parser.add_argument('-c', dest='config',
                             help='path to config file')
-        parser.add_argument("--projects_list",
+        parser.add_argument("--project-list",
                                  type=open,
                                  required=True,
                                  help="File name of projects url list.")
-        parser.add_argument("--result_file",
+        parser.add_argument("--result-file",
                                  type=str,
                                  required=True,
                                  help="Result file name.")
@@ -87,7 +91,7 @@ class RepoScore(object):
 
     def run(self):
         repo_urls = set()
-        repo_urls.update(self.args.projects_list.read().splitlines())
+        repo_urls.update(self.args.project_list.read().splitlines())
 
         csv_writer = csv.writer(sys.stdout)
         header = None
@@ -96,7 +100,7 @@ class RepoScore(object):
             output = None
             for _ in range(self.retry):
                 try:
-                    repo = rs_repo.get_repository(repo_url)
+                    repo = rs_repo.get_repository(repo_url, self.config)
                     output = cs_run.get_repository_stats(repo)
                     break
                 except Exception as exp:
