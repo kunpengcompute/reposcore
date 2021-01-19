@@ -1,0 +1,201 @@
+<head>
+<meta charset="utf-8">
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.bootcdn.net/ajax/libs/datatables/1.10.0/css/jquery.dataTables.css">
+ 
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="https://cdn.bootcdn.net/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+ 
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="https://cdn.bootcdn.net/ajax/libs/datatables/1.10.0/jquery.dataTables.js"></script>
+  <script src="https://cdn.staticfile.org/popper.js/1.15.0/umd/popper.min.js"></script>
+  <script src="https://cdn.staticfile.org/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css">
+
+<style>
+h2 {
+  margin: 10px 0;
+}
+.btn-separator:after {
+    content: '';
+    display: block;
+    float: left;
+    margin: 0 2px;
+
+}
+.form-group {
+  margin: 15 0px
+}
+</style>
+</head>
+
+<body>
+<div style="text-align: center; margin: 10px">
+  <h2>开源项目健康度排名</h2>
+  <hr>
+  <div class="btn-group" role="group">
+  <button type="button" class="btn btn-light" data-toggle="modal" data-target="#projectModal">项目</button>
+  <span class="btn-separator"></span>
+  <button type="button" class="btn btn-light" data-toggle="modal" data-target="#weightModal">权重</button>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="projectModal" tabindex="-1" role="dialog" aria-labelledby="projectLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="projectLabel">项目设置</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <textarea placeholder="请在此键入需要查询的开源项目Github仓库链接，每行一个" id="projectlist" rows="6" style="min-width: 100%;min-height: 27px;"></textarea>
+          <div class="form-group">
+            <select class="form-control" id="projectset">
+              <option value="all">选择全部</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary center-block" data-dismiss="modal">确认</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="weightModal" tabindex="-1" role="dialog" aria-labelledby="weightLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="projectLabel">权重设置</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <table id="weight" class="display cell-border" cellspacing="0" style="font-size:40%"></table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary center" data-dismiss="modal">确认</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table">
+    <table id="reposcore" class="display" cellspacing="0" width="100%"></table>
+  </div>
+
+</div>
+<script>
+var rawscore = './score.json';
+var rawproject = './source.json';
+var weight = [
+    ['created_since', '1', '第一个commit创建时间'],
+    ['updated_since', '-1', '最近commit时间'],
+    ['contributor_count', '1', '历史提交commit的总人数'],
+    ['org_count', '0.5', '历史贡献者所属公司总数'],
+    ['commit_frequency', '4', '近一年每周代码频率'],
+    ['recent_releases_count', '0.5', '最近1年release数目'],
+    ['closed_issues_count', '0.5', '最近3个月关闭问题数'],
+    ['updated_issues_count', '0.5', '最近3个月更新问题数'],
+    ['comment_frequency', '0.5', '最近3个月每个问题评论数'],
+    ['dependents_count', '1', '在提交记录被提及的次数']
+]
+var rawdata = []
+var rawsources = {}
+$(document).ready(function() {
+    $('#weight').dataTable(
+        {
+            "searching" : false, //去掉搜索框方法一
+            "bSort": false,  //禁止排序
+            "paging": false,   //禁止分页
+            "info": false,   //去掉底部文字
+            "data": weight,
+            "columns": [
+            { "title": "参数(Si)", "class": "center"},
+            { "title": "权重(αi)", "class": "center"},
+            { "title": "解释", "class": "center"},
+        ]
+        }
+    )
+    var dt;
+    $.getJSON(rawscore, function( data ) {
+        rawdata = data
+        vals = Object.values(data)
+        dt = $('#reposcore').dataTable( {
+        "lengthMenu": [[15, 20, 50, -1], [15, 20, 50, "All"]],
+        "buttons" : ['copy', 'excel', 'pdf'],
+        "order": [[ 13, "desc" ]],
+        "columnDefs":[{"targets":0, "visible":false}],
+        "data": vals,
+        "columns": [
+            { "title": "项目", "class": "center"},
+            { "title": "仓库", "class": "center"},
+            { "title": "语言", "class": "center"},
+            { "title": "创建<br>时间", "class": "center" },
+            { "title": "更新<br>时间", "class": "center" },
+            { "title": "贡献者<br>数目", "class": "center" },
+            { "title": "组织<br>数目", "class": "center" },
+            { "title": "提交<br>频率", "class": "center" },
+            { "title": "最近<br>发布数", "class": "center" },
+            { "title": "最近<br>更新", "class": "center" },
+            { "title": "最近<br>关闭", "class": "center" },
+            { "title": "评论<br>频率", "class": "center" },
+            { "title": "依赖数", "class": "center" },
+            { "title": "score", "class": "center"}
+        ]
+        } );
+    });
+
+    $.getJSON(rawproject, function( data ) {
+      rawsources = data
+      keys = Object.keys(data)
+      for(var i in keys){             
+            $("#projectset").append("<option value=" +keys[i]+">" + keys[i] + "</option>")
+      }
+      vals = Object.values(rawsources['project1'])
+      $('#projectlist').val(vals.join('\n')).trigger('input');
+      $("#projectset").val("project1")
+    })
+
+    var target = []
+    var filter=''
+    $('#projectlist').bind('input',function(){
+        keywords = []
+        var text = $( "#projectlist" ).val();
+        if (text=='') {
+          dt.fnFilter('', 0, true, false, true, false);
+        } else {
+          text.split('\n').forEach(
+            function(v, i) {
+              if (v in rawdata){
+                keywords.push(v.toLowerCase())
+              }
+            }
+          )
+          filter=''
+          for (var i=0; i<keywords.length; i++) {
+              filter = (filter!=='') ? filter+'|^'+keywords[i] : '^'+keywords[i];
+          }
+          dt.fnFilter(filter, 0, true, false, true, false);
+        }
+    });
+
+    $('#projectset').change(function(){
+      var opt = $(this).val()
+      if (opt=='all') {
+        $('#projectlist').val('').trigger('input');
+      } else {
+        vals = Object.values(rawsources[opt])
+        $('#projectlist').val(vals.join('\n')).trigger('input');
+      }
+    });
+
+
+} );
+
+</script>
+</body>

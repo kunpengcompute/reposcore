@@ -1,2 +1,7 @@
 .vscode/
 *.pyc
+.DS_Store
+build/
+dist/
+reposcore.egg-info/
+venv/
