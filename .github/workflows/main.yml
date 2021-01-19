@@ -1,0 +1,35 @@
+name: Repo Score CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.6']
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          sudo apt-get install python3-setuptools
+          sudo pip3 install -r requirements.txt
+          sudo python3 setup.py install
+          
+      - name: Run
+        run: |
+          export GITHUB_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          reposcore --projects_list test/ci-test.txt --result_file test/result.csv
