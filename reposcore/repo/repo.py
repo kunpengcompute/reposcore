@@ -1,3 +1,14 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from criticality_score import run as cs_run
 
 import argparse
@@ -6,6 +17,7 @@ import datetime
 import json
 import math
 import os
+import re
 import sys
 import threading
 import time
@@ -88,6 +100,37 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
     def __init__(self, repo, config):
         cs_run.GitHubRepository.__init__(self, repo)
         GitLocalRepo.__init__(self, repo, config)
+
+    # TODO(yikun): Re-implementation in GitLocalRepo
+    def get_first_commit_time(self):
+        def _parse_links(response):
+            link_string = response.headers.get('Link')
+            if not link_string:
+                return None
+
+            links = {}
+            for part in link_string.split(','):
+                match = re.match(r'<(.*)>; rel="(.*)"', part.strip())
+                if match:
+                    links[match.group(2)] = match.group(1)
+            return links
+
+        headers = {'Authorization': f'token {token._CACHED_GITHUB_TOKEN}'}
+        for i in range(3):
+            result = requests.get(f'{self._repo.url}/commits', headers=headers)
+            links = _parse_links(result)
+            if links and links.get('last'):
+                result = requests.get(links['last'], headers=headers)
+                if result.status_code == 200:
+                    commits = json.loads(result.content)
+                    if commits:
+                        last_commit_time_string = (
+                            commits[-1]['commit']['committer']['date'])
+                        return datetime.datetime.strptime(
+                            last_commit_time_string, "%Y-%m-%dT%H:%M:%SZ")
+            time.sleep(2**i)
+
+        return None
 
 
 # TODO: Remove all cs_run related code in future
