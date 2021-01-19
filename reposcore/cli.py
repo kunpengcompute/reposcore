@@ -18,6 +18,8 @@ import os
 import sys
 import time
 
+from reposcore.repo import repo as rs_repo
+
 from criticality_score import run as cs_run
 
 
@@ -94,7 +96,7 @@ class RepoScore(object):
             output = None
             for _ in range(self.retry):
                 try:
-                    repo = cs_run.get_repository(repo_url)
+                    repo = rs_repo.get_repository(repo_url)
                     output = cs_run.get_repository_stats(repo)
                     break
                 except Exception as exp:
