@@ -19,8 +19,7 @@ import sys
 import time
 
 from reposcore.repo import repo as rs_repo
-
-from criticality_score import run as cs_run
+from reposcore.stat import stat as rs_stat
 
 
 class RepoScore(object):
@@ -29,35 +28,6 @@ class RepoScore(object):
         self.args = self.parser.parse_args()
         self.config = self._initConfig()
         self.retry = int(self.config.get('global', 'retry'))
-
-        self._init_constants()
-
-    def _init_constants(self):
-        # See more constants in:
-        # https://github.com/ossf/criticality_score/blob/main/criticality_score/constants.py
-        cs_run.CREATED_SINCE_WEIGHT = float(
-            self.config.get('weight', 'created_since_weight'))
-        cs_run.UPDATED_SINCE_WEIGHT = float(
-            self.config.get('weight', 'updated_since_weight'))
-        cs_run.CONTRIBUTOR_COUNT_WEIGHT = float(
-            self.config.get('weight', 'contributor_count_weight'))
-        cs_run.ORG_COUNT_WEIGHT = float(
-            self.config.get('weight', 'org_count_weight'))
-        cs_run.COMMIT_FREQUENCY_WEIGHT = float(
-            self.config.get('weight', 'commit_frequency_weight'))
-        cs_run.RECENT_RELEASES_WEIGHT = float(
-            self.config.get('weight', 'recent_releases_weight'))
-        cs_run.CLOSED_ISSUES_WEIGHT = float(
-            self.config.get('weight', 'closed_issues_weight'))
-        cs_run.UPDATED_ISSUES_WEIGHT = float(
-            self.config.get('weight', 'updated_issues_weight'))
-        cs_run.COMMENT_FREQUENCY_WEIGHT = float(
-            self.config.get('weight', 'comment_frequency_weight'))
-        cs_run.DEPENDENTS_COUNT_WEIGHT = float(
-            self.config.get('weight', 'dependents_count_weight'))
-
-        cs_run.PARAMS.append("code_line_change_recent_year")
-        cs_run.PARAMS.append("activity_contributor_count_recent_year")
 
 
     def _create_parser(self):
@@ -101,7 +71,8 @@ class RepoScore(object):
             for _ in range(self.retry):
                 try:
                     repo = rs_repo.get_repository(repo_url, self.config)
-                    output = cs_run.get_repository_stats(repo)
+                    stat = rs_stat.Stat(self.config, repo)
+                    output = stat.get_stats()
                     break
                 except Exception as exp:
                     print('Failed reading repo %s\n. Detail: %s' % (
