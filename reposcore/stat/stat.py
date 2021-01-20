@@ -10,7 +10,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-import sys
 import threading
 
 
@@ -31,11 +30,9 @@ class Stat():
         self.conf = conf
         self.repo = repo
 
-
     def get_score(self, s, max_value, weigt):
         # map score between [0, 1]
         return (math.log(1 + s) / math.log(1 + max(s, max_value))) * weigt
-
 
     def _get_repository_stats(self):
         """Return repository stats, including criticality score."""
@@ -84,7 +81,7 @@ class Stat():
 
         score = round(score/total_weight, 5)
 
-        # Make sure score between 0 (least-critical) and 1 (most-critical). 
+        # Make sure score between 0 (least-critical) and 1 (most-critical).
         score = max(min(score, 1), 0)
 
         res['criticality_score'] = score
