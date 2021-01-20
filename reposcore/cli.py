@@ -16,7 +16,6 @@ import configparser
 import csv
 import os
 import sys
-import time
 
 from reposcore.repo import repo as rs_repo
 from reposcore.stat import stat as rs_stat
@@ -29,21 +28,18 @@ class RepoScore(object):
         self.config = self._initConfig()
         self.retry = int(self.config.get('global', 'retry'))
 
-
     def _create_parser(self):
         parser = argparse.ArgumentParser(
-            description=
-            'Generate a sorted criticality score list for input projects .')
-        parser.add_argument('-c', dest='config',
-                            help='path to config file')
-        parser.add_argument("--project-list",
-                                 type=open,
-                                 required=True,
-                                 help="File name of projects url list.")
-        parser.add_argument("--result-file",
-                                 type=str,
-                                 required=True,
-                                 help="Result file name.")
+            description='Generate a sorted score list for input projects.')
+        parser.add_argument(
+            '-c', dest='config',
+            help='path to config file')
+        parser.add_argument(
+            "--project-list",
+            type=open, required=True, help="File name of projects url list.")
+        parser.add_argument(
+            "--result-file",
+            type=str, required=True, help="Result file name.")
         return parser
 
     def _initConfig(self):
@@ -93,6 +89,7 @@ class RepoScore(object):
                             reverse=True):
                 csv_writer.writerow(i.values())
         print('Finished, the results file is: %s' % self.args.result_file)
+
 
 def main():
     rs = RepoScore()

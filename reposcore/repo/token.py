@@ -16,7 +16,6 @@ import time
 
 import github
 import gitlab
-import requests
 
 
 _CACHED_GITHUB_TOKEN = None
@@ -60,7 +59,8 @@ def get_github_auth_token():
             _CACHED_GITHUB_TOKEN_OBJ = token_obj
             return token_obj
 
-    print(f'Rate limit exceeded, sleeping till reset: {round(min_wait_time / 60, 1)} minutes.',
+    reset_time = round(min_wait_time / 60, 1)
+    print(f'Rate limit exceeded, sleeping till reset: {reset_time} minutes.',
           file=sys.stderr)
     time.sleep(min_wait_time)
     return token_obj
