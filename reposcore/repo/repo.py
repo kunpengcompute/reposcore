@@ -48,22 +48,26 @@ class GitLocalRepo():
             author_raw = author_raw.replace('"TBBle"', 'TBBle')
         return author_raw
 
-    @property
-    def code_line_change_recent_year(self):
+    def _code_line_change_recent_year(self, match="*"):
         addition = 0
         deletion = 0
 
         changes = self.local_repo.git.log(
-            '--since', self.since_time, '--shortstat', '--oneline'
+            '--since', self.since_time, '--shortstat', '--oneline',
+            '--', match
             ).split('\n')
         for change in changes:
-            if 'files changed' not in change:
+            if 'files changed' not in change and 'file changed' not in change:
                 continue
             if 'insertions' in change:
                 addition += int(change.split(' insertions')[0].split(', ')[-1])
             if 'deletions' in change:
                 deletion += int(change.split(' deletions')[0].split(', ')[-1])
-        return "+%d, -%d" % (addition, deletion)
+        return (addition, deletion)
+
+    @property
+    def code_line_change_recent_year(self):
+        return "+%d, -%d" % self._code_line_change_recent_year()
 
     @property
     def activity_contributor_count_recent_year(self):
@@ -97,6 +101,33 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
         cs_run.GitHubRepository.__init__(self, repo)
         GitLocalRepo.__init__(self, repo, config)
         self.retry = int(config.get('global', 'retry'))
+
+    @property
+    def core_line_change_recent_year(self):
+        # TODO(yikun): language file extension map should be more complete
+        lang_map = {
+            "C": ['c', 'h'],
+            "C++": ['cc', 'c', 'cpp', 'h', 'cxx', 'hxx'],
+            "Java": ['java', 'scala'],
+            "Go": ['go'],
+            "Python": ['py', 'cfg'],
+            "Scala": ['java', 'scala']
+        }
+        lang = self._repo.language
+        change = {}
+        for match in lang_map.get(lang, ['*']):
+            change[match] = self._code_line_change_recent_year('*.' + match)
+
+        res = []
+        addition, deletion = 0, 0
+        for (k, v) in change.items():
+            # code have some change
+            if v[0] or v[1]:
+                res.append("%s: +%d, -%d" % (k, v[0], v[1]))
+                addition += v[0]
+                deletion += v[1]
+
+        return "+%d, -%d (%s)" % (addition, deletion, ' '.join(res))
 
     # TODO(yikun): Re-implementation in GitLocalRepo
     def get_first_commit_time(self):

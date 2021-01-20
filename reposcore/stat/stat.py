@@ -25,6 +25,7 @@ class Stat():
         # the etra params but not sum in score
         self.extra_params = [
             'code_line_change_recent_year',
+            'core_line_change_recent_year',
             'activity_contributor_count_recent_year'
         ]
         self.conf = conf
