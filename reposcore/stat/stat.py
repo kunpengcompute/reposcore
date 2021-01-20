@@ -23,6 +23,11 @@ class Stat():
             'updated_issues_count', 'closed_issues_count',
             'comment_frequency', 'dependents_count'
         ]
+        # the etra params but not sum in score
+        self.extra_params = [
+            'code_line_change_recent_year',
+            'activity_contributor_count_recent_year'
+        ]
         self.conf = conf
         self.repo = repo
 
@@ -42,7 +47,9 @@ class Stat():
         threads = []
         return_dict = {}
 
-        for param in self.params:
+        all_params = self.params + self.extra_params
+
+        for param in all_params:
             thread = threading.Thread(
                 target=_worker, args=(self.repo, param, return_dict))
             thread.start()
@@ -56,7 +63,7 @@ class Stat():
             'url': self.repo.url,
             'language': self.repo.language,
         }
-        for param in self.params:
+        for param in all_params:
             result_dict[param] = return_dict[param]
         return result_dict
 

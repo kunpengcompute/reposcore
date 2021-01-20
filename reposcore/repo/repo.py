@@ -100,6 +100,7 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
     def __init__(self, repo, config):
         cs_run.GitHubRepository.__init__(self, repo)
         GitLocalRepo.__init__(self, repo, config)
+        self.retry = int(config.get('global', 'retry'))
 
     # TODO(yikun): Re-implementation in GitLocalRepo
     def get_first_commit_time(self):
@@ -116,7 +117,7 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
             return links
 
         headers = {'Authorization': f'token {token._CACHED_GITHUB_TOKEN}'}
-        for i in range(3):
+        for i in range(self.retry):
             result = requests.get(f'{self._repo.url}/commits', headers=headers)
             links = _parse_links(result)
             if links and links.get('last'):

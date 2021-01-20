@@ -30,10 +30,6 @@ class RepoScore(object):
         self.retry = int(self.config.get('global', 'retry'))
 
 
-        cs_run.PARAMS.append("code_line_change_recent_year")
-        cs_run.PARAMS.append("activity_contributor_count_recent_year")
-
-
     def _create_parser(self):
         parser = argparse.ArgumentParser(
             description=
