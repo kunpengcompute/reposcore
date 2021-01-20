@@ -29,7 +29,7 @@ python3 setup.py install或pip install -e .
 然后执行命令
 
 ```shell
-reposcore --projects_list projects_url_file --result_file result.csv
+reposcore --project-list projects_url_file --result-file result.csv
 ```
 
 最终输出为csv格式的文件
@@ -59,7 +59,7 @@ If installed with `pip install -e .` command, you will have to copy the `reposco
 Finally, run:
 
 ```shell
-reposcore --projects_list projects_url_file --result_file result.csv
+reposcore --project-list projects_url_file --result-file result.csv
 ```
 
 The output file is in csv format.

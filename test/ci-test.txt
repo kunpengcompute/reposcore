@@ -1,5 +1,1 @@
-https://github.com/tensorflow/tensorflow
-https://github.com/koverstreet/bcachefs
-https://github.com/kubernetes/kubernetes
-https://github.com/llvm/llvm-project
-https://github.com/pytorch/pytorch
+https://github.com/kunpengcompute/reposcore
