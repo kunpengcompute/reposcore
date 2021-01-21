@@ -9,9 +9,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import defaultdict
 import datetime
+from functools import lru_cache, _make_key
 import json
 import re
+import threading
 import time
 import urllib
 
@@ -24,6 +27,7 @@ from reposcore.utils import matrix
 
 
 class GitLocalRepo():
+
     def __init__(self, repo, config):
         self.base_path = config.get('global', 'repos_location')
         self.local_name = repo.full_name
@@ -36,6 +40,18 @@ class GitLocalRepo():
             raise Exception("No local git repo find: %s" % repo_location)
         self.since_time = self._get_start_date()
 
+    def threadsafe_lru(func):
+        # Enable the LRU cache, that means *same func with same args*
+        # in this class, will return *same result* directly
+        func = lru_cache()(func)
+        lock_pool = defaultdict(threading.Lock)
+
+        def _threadsafe_lru(*args, **kwargs):
+            key = str(_make_key((func.__name__,) + args, kwargs, typed=False))
+            with lock_pool[key]:
+                return func(*args, **kwargs)
+        return _threadsafe_lru
+
     def _get_start_date(self):
         start_year = int(time.strftime('%Y', time.localtime(time.time()))) - 1
         month_day = time.strftime('%m-%d', time.localtime(time.time()))
@@ -47,6 +63,7 @@ class GitLocalRepo():
                 author_raw = author_raw.replace(name_map[0], name_map[1])
         return author_raw
 
+    @threadsafe_lru
     def _code_line_change_recent_year(self, match="*"):
         addition = 0
         deletion = 0
@@ -87,11 +104,27 @@ class GitLocalRepo():
         return (addition, deletion)
 
     @property
+    def code_effort(self):
+        # if you write 20 loc everyday, 20*22*12=5280 line
+        add = self._code_line_change_recent_year()[0]
+        return '%.1f' % float(add / 5280)
+
+    @property
     def code_line_change_recent_year(self):
         return "+%d, -%d" % self._code_line_change_recent_year()
 
     @property
+    def core_effort(self):
+        # if you write 20 loc everyday, 20*22*12=5280 line
+        add = self._core_line_change_recent_year()[0]
+        return '%.1f' % float(add / 5280)
+
+    @property
     def core_line_change_recent_year(self):
+        add, dele, detail = self._core_line_change_recent_year()
+        return "+%d, -%d (%s)" % (add, dele, detail)
+
+    def _core_line_change_recent_year(self):
         change = {}
         for match in matrix.LANGUAGE_MAPPING.get(self.language, ['*']):
             change[match] = self._code_line_change_recent_year('*.' + match)
@@ -105,7 +138,7 @@ class GitLocalRepo():
                 addition += v[0]
                 deletion += v[1]
 
-        return "+%d, -%d (%s)" % (addition, deletion, ' '.join(res))
+        return (addition, deletion, ' '.join(res))
 
     @property
     def activity_contributor_count_recent_year(self):
