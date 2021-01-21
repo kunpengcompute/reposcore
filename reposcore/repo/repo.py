@@ -20,12 +20,16 @@ from git import Repo
 import requests
 
 from reposcore.repo import token
+from reposcore.utils import matrix
 
 
 class GitLocalRepo():
     def __init__(self, repo, config):
-        base_path = config.get('global', 'repos_location')
-        repo_location = base_path + '/' + repo.full_name
+        self.base_path = config.get('global', 'repos_location')
+        self.local_name = repo.full_name
+        self.local_language = repo.language
+
+        repo_location = self.base_path + '/' + repo.full_name
         try:
             self.local_repo = Repo(repo_location)
         except Exception:
@@ -38,36 +42,70 @@ class GitLocalRepo():
         return '{}-{}'.format(start_year, month_day)
 
     def _name_fix(self, author_raw):
-        if 'freedom"' in author_raw:
-            author_raw = author_raw.replace('freedom"', 'freedom')
-        if '"henyxia"' in author_raw:
-            author_raw = author_raw.replace('"henyxia"', 'henyxia')
-        if '"Tempa Kyouran"' in author_raw:
-            author_raw = author_raw.replace('"Tempa Kyouran"', 'Tempa Kyouran')
-        if '"TBBle"' in author_raw:
-            author_raw = author_raw.replace('"TBBle"', 'TBBle')
+        for name_map in matrix.AUTHOR_FIX_MAPPING:
+            if name_map[0] in author_raw:
+                author_raw = author_raw.replace(name_map[0], name_map[1])
         return author_raw
 
     def _code_line_change_recent_year(self, match="*"):
         addition = 0
         deletion = 0
 
-        changes = self.local_repo.git.log(
-            '--since', self.since_time, '--shortstat', '--oneline',
-            '--', match
-            ).split('\n')
-        for change in changes:
-            if 'files changed' not in change and 'file changed' not in change:
-                continue
-            if 'insertions' in change:
-                addition += int(change.split(' insertions')[0].split(', ')[-1])
-            if 'deletions' in change:
-                deletion += int(change.split(' deletions')[0].split(', ')[-1])
+        def _count_code_line(repo, repo_name):
+            nonlocal addition
+            nonlocal deletion
+
+            changes = repo.git.log(
+                '--since', self.since_time, '--shortstat', '--oneline',
+                '--', match
+                ).split('\n')
+            for change in changes:
+                if ('files changed' not in change and
+                        'file changed' not in change):
+                    continue
+                if 'insertions' in change:
+                    addition += int(
+                        change.split(' insertions')[0].split(', ')[-1])
+                if 'deletions' in change:
+                    deletion += int(
+                        change.split(' deletions')[0].split(', ')[-1])
+
+            if repo_name in matrix.NEED_SUBMODULE_MAPPING:
+                for module in repo.submodules:
+                    if module.path not in matrix.BROKEN_PROJECT_MAPPING:
+                        module_repo = Repo(
+                            self.base_path
+                            + '/'
+                            + self.local_name
+                            + '/'
+                            + module.path)
+                        _count_code_line(
+                            module_repo,
+                            repo_name + '/' + module.path)
+
+        _count_code_line(self.local_repo, self.local_name)
         return (addition, deletion)
 
     @property
     def code_line_change_recent_year(self):
         return "+%d, -%d" % self._code_line_change_recent_year()
+
+    @property
+    def core_line_change_recent_year(self):
+        change = {}
+        for match in matrix.LANGUAGE_MAPPING.get(self.language, ['*']):
+            change[match] = self._code_line_change_recent_year('*.' + match)
+
+        res = []
+        addition, deletion = 0, 0
+        for (k, v) in change.items():
+            # code have some change
+            if v[0] or v[1]:
+                res.append("%s: +%d, -%d" % (k, v[0], v[1]))
+                addition += v[0]
+                deletion += v[1]
+
+        return "+%d, -%d (%s)" % (addition, deletion, ' '.join(res))
 
     @property
     def activity_contributor_count_recent_year(self):
@@ -101,33 +139,6 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
         cs_run.GitHubRepository.__init__(self, repo)
         GitLocalRepo.__init__(self, repo, config)
         self.retry = int(config.get('global', 'retry'))
-
-    @property
-    def core_line_change_recent_year(self):
-        # TODO(yikun): language file extension map should be more complete
-        lang_map = {
-            "C": ['c', 'h'],
-            "C++": ['cc', 'c', 'cpp', 'h', 'cxx', 'hxx'],
-            "Java": ['java', 'scala'],
-            "Go": ['go'],
-            "Python": ['py', 'cfg'],
-            "Scala": ['java', 'scala']
-        }
-        lang = self._repo.language
-        change = {}
-        for match in lang_map.get(lang, ['*']):
-            change[match] = self._code_line_change_recent_year('*.' + match)
-
-        res = []
-        addition, deletion = 0, 0
-        for (k, v) in change.items():
-            # code have some change
-            if v[0] or v[1]:
-                res.append("%s: +%d, -%d" % (k, v[0], v[1]))
-                addition += v[0]
-                deletion += v[1]
-
-        return "+%d, -%d (%s)" % (addition, deletion, ' '.join(res))
 
     # TODO(yikun): Re-implementation in GitLocalRepo
     def get_first_commit_time(self):
