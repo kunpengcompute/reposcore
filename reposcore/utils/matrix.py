@@ -1,12 +1,3 @@
-# This List contains the contributor name that can't be deal with json format.
-AUTHOR_FIX_MAPPING = [
-    ('freedom"', 'freedom'),
-    ('"henyxia"', 'henyxia'),
-    ('"Tempa Kyouran"', 'Tempa Kyouran'),
-    ('"TBBle"', 'TBBle'),
-]
-
-
 # This list contains the project that `git` tool is broken.
 BROKEN_PROJECT_MAPPING = {
     'openstack/openstack': [

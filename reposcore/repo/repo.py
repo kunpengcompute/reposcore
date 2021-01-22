@@ -58,12 +58,6 @@ class GitLocalRepo():
         month_day = time.strftime('%m-%d', time.localtime(time.time()))
         return '{}-{}'.format(start_year, month_day)
 
-    def _name_fix(self, author_raw):
-        for name_map in matrix.AUTHOR_FIX_MAPPING:
-            if name_map[0] in author_raw:
-                author_raw = author_raw.replace(name_map[0], name_map[1])
-        return author_raw
-
     @threadsafe_lru
     def _code_line_change_recent_year(self, match="*"):
         addition = 0
@@ -138,32 +132,18 @@ class GitLocalRepo():
 
     @property
     def activity_contributor_count_recent_year(self):
-        author_list = {}
+        author_dict = defaultdict(int)
         active_count = 0
-
-        out_format = '--pretty=format:{"name": "%an","email": "%ae"}'
+        # Note(yikun): the same name contributors will be one record.
+        out_format = '--pretty=format:%an'
         authors = self.local_repo.git.log(
             '--since', self.since_time, out_format
             ).replace('\\', '').split('\n')
         for author_raw in authors:
-            if author_raw:
-                author_raw = self._name_fix(author_raw)
-                try:
-                    author = json.loads(author_raw)
-                except Exception:
-                    raise Exception('can not parse json raw %s' % author_raw)
-
-                if not author_list.get(author['name']):
-                    author_list[author['name']] = {
-                        "email": author['email'],
-                        "commit_count": 1
-                    }
-                else:
-                    author_list[author['name']]['commit_count'] += 1
-        for key, value in author_list.items():
-            if value['commit_count'] >= 20:
+            author_dict[author_raw] += 1
+        for value in author_dict.values():
+            if value >= 20:
                 active_count += 1
-
         return active_count
 
 
