@@ -32,6 +32,5 @@ jobs:
       - name: Run
         run: |
           export GITHUB_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          mkdir -p /opt/repos/kunpengcompute
-          git clone https://github.com/kunpengcompute/reposcore /opt/repos/kunpengcompute/reposcore
-          reposcore -c etc/reposcore.conf --project-list test/ci-test.txt --result-file test/result.csv
+          mkdir -p /opt/repos
+          reposcore -c etc/reposcore.conf --project-list test/ci-test.txt --result-file test/result.csv --auto-update

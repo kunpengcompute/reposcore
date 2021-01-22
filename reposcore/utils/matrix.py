@@ -8,11 +8,12 @@ AUTHOR_FIX_MAPPING = [
 
 
 # This list contains the project that `git` tool is broken.
-BROKEN_PROJECT_MAPPING = [
-    'openstack-tempest-skiplist',
-    'whitebox-tempest-plugin',
-    'xstatic-graphlib',
-]
+BROKEN_PROJECT_MAPPING = {
+    'openstack/openstack': [
+        'openstack-tempest-skiplist',
+        'whitebox-tempest-plugin',
+        'xstatic-graphlib']
+}
 
 
 # TODO(yikun): language file extension map should be more complete

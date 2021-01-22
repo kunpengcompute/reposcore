@@ -29,15 +29,16 @@ from reposcore.utils import matrix
 class GitLocalRepo():
 
     def __init__(self, repo, config):
-        self.base_path = config.get('global', 'repos_location')
-        self.local_name = repo.full_name
-        self.local_language = repo.language
+        base_path = config.get('global', 'repos_location')
 
-        repo_location = self.base_path + '/' + repo.full_name
+        self.local_name = repo.full_name.lower()
+        self.local_path = base_path + '/' + repo.full_name.lower()
+        self.main_language = repo.language
+
         try:
-            self.local_repo = Repo(repo_location)
+            self.local_repo = Repo(self.local_path)
         except Exception:
-            raise Exception("No local git repo find: %s" % repo_location)
+            raise Exception("No local git repo find: %s" % self.local_path)
         self.since_time = self._get_start_date()
 
     def threadsafe_lru(func):
@@ -68,7 +69,7 @@ class GitLocalRepo():
         addition = 0
         deletion = 0
 
-        def _count_code_line(repo, repo_name):
+        def _count_code_line(repo, repo_name, repo_path):
             nonlocal addition
             nonlocal deletion
 
@@ -89,18 +90,13 @@ class GitLocalRepo():
 
             if repo_name in matrix.NEED_SUBMODULE_MAPPING:
                 for module in repo.submodules:
-                    if module.path not in matrix.BROKEN_PROJECT_MAPPING:
-                        module_repo = Repo(
-                            self.base_path
-                            + '/'
-                            + self.local_name
-                            + '/'
-                            + module.path)
-                        _count_code_line(
-                            module_repo,
-                            repo_name + '/' + module.path)
+                    m_name = module.path.lower()
+                    m_path = repo_path + '/' + m_name
+                    if m_name not in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
+                        module_repo = Repo(m_path)
+                        _count_code_line(module_repo, m_name, m_path)
 
-        _count_code_line(self.local_repo, self.local_name)
+        _count_code_line(self.local_repo, self.local_name, self.local_path)
         return (addition, deletion)
 
     @property
@@ -126,7 +122,7 @@ class GitLocalRepo():
 
     def _core_line_change_recent_year(self):
         change = {}
-        for match in matrix.LANGUAGE_MAPPING.get(self.language, ['*']):
+        for match in matrix.LANGUAGE_MAPPING.get(self.main_language, ['*']):
             change[match] = self._code_line_change_recent_year('*.' + match)
 
         res = []
@@ -150,15 +146,20 @@ class GitLocalRepo():
             '--since', self.since_time, out_format
             ).replace('\\', '').split('\n')
         for author_raw in authors:
-            author_raw = self._name_fix(author_raw)
-            author = json.loads(author_raw)
-            if not author_list.get(author['name']):
-                author_list[author['name']] = {
-                    "email": author['email'],
-                    "commit_count": 1
-                }
-            else:
-                author_list[author['name']]['commit_count'] += 1
+            if author_raw:
+                author_raw = self._name_fix(author_raw)
+                try:
+                    author = json.loads(author_raw)
+                except Exception:
+                    raise Exception('can not parse json raw %s' % author_raw)
+
+                if not author_list.get(author['name']):
+                    author_list[author['name']] = {
+                        "email": author['email'],
+                        "commit_count": 1
+                    }
+                else:
+                    author_list[author['name']]['commit_count'] += 1
         for key, value in author_list.items():
             if value['commit_count'] >= 20:
                 active_count += 1
