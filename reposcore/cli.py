@@ -14,9 +14,13 @@
 import argparse
 import configparser
 import csv
+import git
 import os
 import sys
+import urllib
 
+from reposcore.utils import git_utils
+from reposcore.utils import matrix
 from reposcore.repo import repo as rs_repo
 from reposcore.stat import stat as rs_stat
 
@@ -40,6 +44,10 @@ class RepoScore(object):
         parser.add_argument(
             "--result-file",
             type=str, required=True, help="Result file name.")
+        parser.add_argument(
+            "--auto-update",
+            action='store_true', default=False,
+            help='Auto clone or update the source code')
         return parser
 
     def _initConfig(self):
@@ -55,6 +63,41 @@ class RepoScore(object):
 
         raise Exception("Unable to locate config file in %s" % location)
 
+    def _auto_update_repo(self, repo_urls):
+        for repo_url in repo_urls:
+            repo_name = urllib.parse.urlparse(repo_url).path.strip('/').lower()
+            try:
+                local_repo = git.Repo(
+                    self.config.get('global', 'repos_location') + '/'
+                    + repo_name)
+            except git.exc.NoSuchPathError:
+                # Clone
+                local_repo = git.Repo.clone_from(
+                    repo_url,
+                    self.config.get(
+                        'global', 'repos_location') + '/' + repo_name,
+                    progress=git_utils.Progress(repo_name))
+                # Submodule init
+                args = ['update', '--init']
+                if matrix.BROKEN_PROJECT_MAPPING.get(repo_name):
+                    for project in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
+                        args.append('-c')
+                        args.append('submodule."%s".update=none' % project)
+                local_repo.git.submodule(*args)
+            else:
+                # Update
+                print('Start updating %s' % repo_name)
+
+                local_repo.git.pull()
+                args = ['update']
+                if matrix.BROKEN_PROJECT_MAPPING.get(repo_name):
+                    for project in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
+                        args.append('-c')
+                        args.append('submodule."%s".update=none' % project)
+                local_repo.git.submodule(*args)
+
+                print('Success updating %s' % repo_name)
+
     def run(self):
         repo_urls = set()
         repo_urls.update(self.args.project_list.read().splitlines())
@@ -62,7 +105,11 @@ class RepoScore(object):
         csv_writer = csv.writer(sys.stdout)
         header = None
         stats = []
+        if self.args.auto_update:
+            self._auto_update_repo(repo_urls)
         for repo_url in repo_urls:
+            if not repo_url:
+                continue
             output = None
             for _ in range(self.retry):
                 try:
