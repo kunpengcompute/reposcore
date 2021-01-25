@@ -81,8 +81,8 @@ class RepoScore(object):
                 args = ['update', '--init']
                 if matrix.BROKEN_PROJECT_MAPPING.get(repo_name):
                     for project in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
-                        args.append('-c')
-                        args.append('submodule."%s".update=none' % project)
+                        ignore = 'submodule."%s".update=none' % project
+                        args = ['-c', ignore].extend(args)
                 local_repo.git.submodule(*args)
             else:
                 # Update
@@ -92,8 +92,8 @@ class RepoScore(object):
                 args = ['update']
                 if matrix.BROKEN_PROJECT_MAPPING.get(repo_name):
                     for project in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
-                        args.append('-c')
-                        args.append('submodule."%s".update=none' % project)
+                        ignore = 'submodule."%s".update=none' % project
+                        args = ['-c', ignore].extend(args)
                 local_repo.git.submodule(*args)
 
                 print('Success updating %s' % repo_name)
