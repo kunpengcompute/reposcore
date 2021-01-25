@@ -58,39 +58,41 @@ class GitLocalRepo():
         month_day = time.strftime('%m-%d', time.localtime(time.time()))
         return '{}-{}'.format(start_year, month_day)
 
+    def _count_code_line(self, repo, match):
+        addition = 0
+        deletion = 0
+
+        changes = repo.git.log(
+            '--since', self.since_time, '--shortstat', '--oneline',
+            '--', match
+            ).split('\n')
+        for change in changes:
+            if ('files changed' not in change and
+                    'file changed' not in change):
+                continue
+            if 'insertions' in change:
+                addition += int(
+                    change.split(' insertions')[0].split(', ')[-1])
+            if 'deletions' in change:
+                deletion += int(
+                    change.split(' deletions')[0].split(', ')[-1])
+        return addition, deletion
+
     @threadsafe_lru
     def _code_line_change_recent_year(self, match="*"):
         addition = 0
         deletion = 0
 
-        def _count_code_line(repo, repo_name, repo_path):
-            nonlocal addition
-            nonlocal deletion
+        if matrix.SUBMODULE_MAPPING.get(self.local_name):
+            for m_name in matrix.SUBMODULE_MAPPING[self.local_name]:
+                module_repo = Repo(self.local_path + '/' + m_name)
+                child_addition, child_deletion = self._count_code_line(
+                    module_repo, match)
+                addition += child_addition
+                deletion += child_deletion
+        else:
+            addition, deletion = self._count_code_line(self.local_repo, match)
 
-            changes = repo.git.log(
-                '--since', self.since_time, '--shortstat', '--oneline',
-                '--', match
-                ).split('\n')
-            for change in changes:
-                if ('files changed' not in change and
-                        'file changed' not in change):
-                    continue
-                if 'insertions' in change:
-                    addition += int(
-                        change.split(' insertions')[0].split(', ')[-1])
-                if 'deletions' in change:
-                    deletion += int(
-                        change.split(' deletions')[0].split(', ')[-1])
-
-            if repo_name in matrix.NEED_SUBMODULE_MAPPING:
-                for module in repo.submodules:
-                    m_name = module.path.lower()
-                    m_path = repo_path + '/' + m_name
-                    if m_name not in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
-                        module_repo = Repo(m_path)
-                        _count_code_line(module_repo, m_name, m_path)
-
-        _count_code_line(self.local_repo, self.local_name, self.local_path)
         return (addition, deletion)
 
     @property
@@ -130,11 +132,10 @@ class GitLocalRepo():
 
         return (addition, deletion, ' '.join(res))
 
-    @property
-    def activity_contributor_count_recent_year(self):
+    def _count_contributor(self, repo):
         author_dict = defaultdict(int)
         active_count = 0
-        # Note(yikun): the same name contributors will be one record.
+
         out_format = '--pretty=format:%an'
         authors = self.local_repo.git.log(
             '--since', self.since_time, out_format
@@ -144,6 +145,19 @@ class GitLocalRepo():
         for value in author_dict.values():
             if value >= 20:
                 active_count += 1
+        return active_count
+
+    @property
+    def activity_contributor_count_recent_year(self):
+        active_count = 0
+
+        if matrix.SUBMODULE_MAPPING.get(self.local_name):
+            for m_name in matrix.SUBMODULE_MAPPING[self.local_name]:
+                module_repo = Repo(self.local_path + '/' + m_name)
+                active_count += self._count_contributor(module_repo)
+        else:
+            active_count = self._count_contributor(self.local_repo)
+
         return active_count
 
 

@@ -17,8 +17,32 @@ LANGUAGE_MAPPING = {
     "Scala": ['java', 'scala'],
 }
 
+# OpenStack core prjects.
+OPENSTACK_SUBMODULE = [
+    "nova",
+    "neutron",
+    "cinder",
+    "ironic",
+    "glance",
+    "horizon",
+    "manila",
+    "keystone",
+    "ceilometer",
+    "neutron-lib",
+    "swift",
+    "heat",
+    "designate",
+    "trove",
+    "sahara",
+    "sahara-plugin-ambari",
+    "sahara-plugin-spark",
+    "sahara-plugin-storm",
+    "sahara-plugin-cdh",
+    "sahara-plugin-vanilla",
+    "sahara-plugin-mapr",
+]
 
 # This list contains the project which has submodules need to be count.
-NEED_SUBMODULE_MAPPING = [
-    'openstack/openstack',
-]
+SUBMODULE_MAPPING = {
+    'openstack/openstack': OPENSTACK_SUBMODULE
+}
