@@ -16,6 +16,7 @@ import configparser
 import csv
 import git
 import os
+import shutil
 import sys
 import urllib
 
@@ -63,6 +64,38 @@ class RepoScore(object):
 
         raise Exception("Unable to locate config file in %s" % location)
 
+    def _init_clone_repo(self, repo_url, repo_name):
+        # Clone
+        local_repo = git.Repo.clone_from(
+            repo_url,
+            self.config.get(
+                'global', 'repos_location') + '/' + repo_name,
+            progress=git_utils.Progress(repo_name))
+        # Submodule init
+        repos = matrix.SUBMODULE_MAPPING.get(repo_name)
+        if repos:
+            cmds = ['update', '--init']
+            cmds.extend(repos)
+            local_repo.git.submodule(*cmds)
+
+    def _update_repo(self, local_repo, repo_url, repo_name):
+        # Update
+        print('Start updating %s' % repo_name)
+        try:
+            local_repo.git.pull()
+            repos = matrix.SUBMODULE_MAPPING.get(repo_name)
+            if repos:
+                cmds = ['update']
+                cmds.extend(repos)
+                local_repo.git.submodule(*cmds)
+        except git.exc.GitCommandError:
+            # Cleanup local repo and re-clone
+            print('Updating failed, re-clone %s' % repo_name)
+            shutil.rmtree(local_repo.working_dir)
+            self._init_clone_repo(repo_url, repo_name)
+
+        print('Success updating %s' % repo_name)
+
     def _auto_update_repo(self, repo_urls):
         for repo_url in repo_urls:
             repo_name = urllib.parse.urlparse(repo_url).path.strip('/').lower()
@@ -71,32 +104,9 @@ class RepoScore(object):
                     self.config.get('global', 'repos_location') + '/'
                     + repo_name)
             except git.exc.NoSuchPathError:
-                # Clone
-                local_repo = git.Repo.clone_from(
-                    repo_url,
-                    self.config.get(
-                        'global', 'repos_location') + '/' + repo_name,
-                    progress=git_utils.Progress(repo_name))
-                # Submodule init
-                args = ['update', '--init']
-                if matrix.BROKEN_PROJECT_MAPPING.get(repo_name):
-                    for project in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
-                        ignore = 'submodule."%s".update=none' % project
-                        args = ['-c', ignore].extend(args)
-                local_repo.git.submodule(*args)
+                self._init_clone_repo(repo_url, repo_name)
             else:
-                # Update
-                print('Start updating %s' % repo_name)
-
-                local_repo.git.pull()
-                args = ['update']
-                if matrix.BROKEN_PROJECT_MAPPING.get(repo_name):
-                    for project in matrix.BROKEN_PROJECT_MAPPING[repo_name]:
-                        ignore = 'submodule."%s".update=none' % project
-                        args = ['-c', ignore].extend(args)
-                local_repo.git.submodule(*args)
-
-                print('Success updating %s' % repo_name)
+                self._update_repo(local_repo, repo_url, repo_name)
 
     def run(self):
         repo_urls = set()

@@ -132,31 +132,30 @@ class GitLocalRepo():
 
         return (addition, deletion, ' '.join(res))
 
-    def _count_contributor(self, repo):
+    @property
+    def activity_contributor_count_recent_year(self):
         author_dict = defaultdict(int)
         active_count = 0
 
-        out_format = '--pretty=format:%an'
-        authors = self.local_repo.git.log(
-            '--since', self.since_time, out_format
-            ).replace('\\', '').split('\n')
-        for author_raw in authors:
-            author_dict[author_raw] += 1
-        for value in author_dict.values():
-            if value >= 20:
-                active_count += 1
-        return active_count
-
-    @property
-    def activity_contributor_count_recent_year(self):
-        active_count = 0
+        def _gen_author_dict(repo):
+            nonlocal author_dict
+            out_format = '--pretty=format:%an'
+            authors = repo.git.log(
+                '--since', self.since_time, out_format
+                ).replace('\\', '').split('\n')
+            for author_raw in authors:
+                author_dict[author_raw] += 1
 
         if matrix.SUBMODULE_MAPPING.get(self.local_name):
             for m_name in matrix.SUBMODULE_MAPPING[self.local_name]:
                 module_repo = Repo(self.local_path + '/' + m_name)
-                active_count += self._count_contributor(module_repo)
+                _gen_author_dict(module_repo)
         else:
-            active_count = self._count_contributor(self.local_repo)
+            _gen_author_dict(self.local_repo)
+
+        for value in author_dict.values():
+            if value >= 20:
+                active_count += 1
 
         return active_count
 
