@@ -18,6 +18,7 @@ import git
 import os
 import shutil
 import sys
+import time
 import urllib
 
 from reposcore.utils import git_utils
@@ -49,6 +50,10 @@ class RepoScore(object):
             "--auto-update",
             action='store_true', default=False,
             help='Auto clone or update the source code')
+        parser.add_argument(
+            "--with-time",
+            action='store_true', default=False,
+            help='auto add a time column')
         return parser
 
     def _initConfig(self):
@@ -108,6 +113,12 @@ class RepoScore(object):
             else:
                 self._update_repo(local_repo, repo_url, repo_name)
 
+    def _insert_val(self, arr, v):
+        if self.args.with_time:
+            return [v] + list(arr)
+        else:
+            return arr
+
     def run(self):
         repo_urls = set()
         repo_urls.update(self.args.project_list.read().splitlines())
@@ -117,6 +128,7 @@ class RepoScore(object):
         stats = []
         if self.args.auto_update:
             self._auto_update_repo(repo_urls)
+        t = time.strftime("%Y-%m-%dT%H:00:00+0800")
         for repo_url in repo_urls:
             if not repo_url:
                 continue
@@ -133,9 +145,10 @@ class RepoScore(object):
             if not output:
                 continue
             if not header:
-                header = output.keys()
+                header = self._insert_val(output.keys(), 'created_at')
                 csv_writer.writerow(header)
-            csv_writer.writerow(output.values())
+            csv_writer.writerow(
+                self._insert_val(output.values(), t))
             stats.append(output)
 
         with open(self.args.result_file, 'w') as file_handle:
@@ -144,7 +157,8 @@ class RepoScore(object):
             for i in sorted(stats,
                             key=lambda i: i['criticality_score'],
                             reverse=True):
-                csv_writer.writerow(i.values())
+                csv_writer.writerow(
+                    self._insert_val(i.values(), t))
         print('Finished, the results file is: %s' % self.args.result_file)
 
 
