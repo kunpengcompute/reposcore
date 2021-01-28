@@ -12,12 +12,15 @@
 """Main python script for calculating Repo Score."""
 
 import argparse
+from collections import defaultdict
 import configparser
 import csv
+from functools import lru_cache, _make_key
 import git
 import os
 import shutil
 import sys
+import threading
 import time
 import urllib
 
@@ -27,12 +30,20 @@ from reposcore.repo import repo as rs_repo
 from reposcore.stat import stat as rs_stat
 
 
+class FakeArgs(object):
+    def __init__(self, conf, auto_update, enable_local):
+        self.config = conf
+        self.auto_update = auto_update
+        self.enable_local = enable_local
+
+
 class RepoScore(object):
     def __init__(self):
         self.parser = self._create_parser()
         self.args = self.parser.parse_args()
         self.config = self._initConfig()
         self.retry = int(self.config.get('global', 'retry'))
+        self.enable_local = self.args.enable_local
 
     def _create_parser(self):
         parser = argparse.ArgumentParser(
@@ -53,7 +64,11 @@ class RepoScore(object):
         parser.add_argument(
             "--with-time",
             action='store_true', default=False,
-            help='auto add a time column')
+            help='auto add a time column'),
+        parser.add_argument(
+            "--enable-local",
+            action='store_true', default=False,
+            help='with local repo offline analysis')
         return parser
 
     def _initConfig(self):
@@ -102,6 +117,8 @@ class RepoScore(object):
         print('Success updating %s' % repo_name)
 
     def _auto_update_repo(self, repo_urls):
+        if not self.args.enable_local:
+            return
         for repo_url in repo_urls:
             repo_name = urllib.parse.urlparse(repo_url).path.strip('/').lower()
             try:
@@ -135,7 +152,8 @@ class RepoScore(object):
             output = None
             for _ in range(self.retry):
                 try:
-                    repo = rs_repo.get_repository(repo_url, self.config)
+                    repo = rs_repo.get_repository(
+                        repo_url, self.config, self.args.enable_local)
                     stat = rs_stat.Stat(self.config, repo)
                     output = stat.get_stats()
                     break
@@ -160,6 +178,34 @@ class RepoScore(object):
                 csv_writer.writerow(
                     self._insert_val(i.values(), t))
         print('Finished, the results file is: %s' % self.args.result_file)
+
+
+class SingleRepoScore(RepoScore):
+    def __init__(self, conf, auto_update=True, enable_local=False):
+        self.args = FakeArgs(
+            conf, auto_update=auto_update, enable_local=enable_local)
+        self.config = self._initConfig()
+
+    def threadsafe_lru(func):
+        # Enable the LRU cache, that means *same func with same args*
+        # in this class, will return *same result* directly
+        func = lru_cache()(func)
+        lock_pool = defaultdict(threading.Lock)
+
+        def _threadsafe_lru(*args, **kwargs):
+            key = str(_make_key((func.__name__,) + args, kwargs, typed=False))
+            with lock_pool[key]:
+                return func(*args, **kwargs)
+        return _threadsafe_lru
+
+    @threadsafe_lru
+    def get_score(self, repo_url):
+        self._auto_update_repo([repo_url])
+        repo = rs_repo.get_repository(
+            repo_url, self.config, self.args.enable_local)
+        stat = rs_stat.Stat(self.config, repo)
+        output = stat.get_stats()
+        return output
 
 
 def main():

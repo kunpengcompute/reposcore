@@ -162,9 +162,11 @@ class GitLocalRepo():
 
 # TODO: Remove all cs_run related code in future
 class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
-    def __init__(self, repo, config):
+    def __init__(self, repo, config, enable_local):
         cs_run.GitHubRepository.__init__(self, repo)
-        GitLocalRepo.__init__(self, repo, config)
+        if enable_local:
+            GitLocalRepo.__init__(self, repo, config)
+        self.enable_local = enable_local
         self.retry = int(config.get('global', 'retry'))
 
     # TODO(yikun): Re-implementation in GitLocalRepo
@@ -206,7 +208,7 @@ class GitLabRepository(cs_run.GitLabRepository, GitLocalRepo):
         GitLocalRepo.__init__(self, repo)
 
 
-def get_repository(url, config):
+def get_repository(url, config, enable_local):
     """Return repository object, given a url."""
     if '://' not in url:
         url = 'https://' + url
@@ -215,7 +217,8 @@ def get_repository(url, config):
     repo_url = parsed_url.path.strip('/')
     if parsed_url.netloc.endswith('github.com'):
         repo = GitHubRepository(
-            token.get_github_auth_token().get_repo(repo_url), config)
+            token.get_github_auth_token().get_repo(repo_url),
+            config, enable_local)
         return repo
     if 'gitlab' in parsed_url.netloc:
         host = parsed_url.scheme + '://' + parsed_url.netloc

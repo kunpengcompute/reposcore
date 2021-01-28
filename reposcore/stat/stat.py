@@ -15,6 +15,7 @@ import threading
 
 class Stat():
     def __init__(self, conf, repo):
+        self.repo = repo
         self.params = [
             'created_since', 'updated_since',
             'contributor_count', 'org_count',
@@ -22,16 +23,18 @@ class Stat():
             'updated_issues_count', 'closed_issues_count',
             'comment_frequency', 'dependents_count'
         ]
-        # the etra params but not sum in score
-        self.extra_params = [
-            'code_line_change_recent_year',
-            'code_effort',
-            'core_line_change_recent_year',
-            'core_effort',
-            'activity_contributor_count_recent_year',
-        ]
+        if self.repo.enable_local:
+            # the etra params but not sum in score
+            self.local_params = [
+                'code_line_change_recent_year',
+                'code_effort',
+                'core_line_change_recent_year',
+                'core_effort',
+                'activity_contributor_count_recent_year',
+            ]
+        else:
+            self.local_params = []
         self.conf = conf
-        self.repo = repo
 
     def get_score(self, s, max_value, weigt):
         # map score between [0, 1]
@@ -47,7 +50,7 @@ class Stat():
         threads = []
         return_dict = {}
 
-        all_params = self.params + self.extra_params
+        all_params = self.params + self.local_params
 
         for param in all_params:
             thread = threading.Thread(
