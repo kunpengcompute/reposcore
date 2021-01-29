@@ -1,0 +1,25 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+<h3>开源项目健康度查询：</h3>
+<form method="post">
+    <input type="text" name="reponame" placeholder="请键入github url，例如：https://github.com/kunpengcompute/kunpeng" value="">
+    <input type="submit" value="提交">
+</form>
+{% if name %}
+<h3>查询结果：</h3>
+<table>
+    <tbody>
+        <tr><td>名称</td><td>{{ name }}</td></tr>
+        <tr><td>链接</td><td>{{ url }}</td></tr>
+        <tr><td>语言</td><td>{{ language }}</td></tr>
+        <tr><td>得分</td><td>{{ score }}</td></tr>
+    </tbody>
+</table>
+{% else %}
+{% endif %}
+</body>
+</html>
