@@ -6,3 +6,5 @@ dist/
 reposcore.egg-info/
 venv/
 .eggs/
+.idea/
+*.iml
