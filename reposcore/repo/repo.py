@@ -159,6 +159,14 @@ class GitLocalRepo():
 
         return active_count
 
+    @property
+    def commit_frequency_local(self):
+        out_format = '--pretty=format:%h'
+        commits = self.local_repo.git.log(
+                '--no-merges', '--since', self.since_time, out_format
+        ).replace('\\', '').split('\n')
+        return round(len(commits) / 52, 1)
+
 
 # TODO: Remove all cs_run related code in future
 class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
@@ -172,6 +180,15 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
     @property
     def name(self):
         return self._repo.name.lower()
+
+    @property
+    def commit_frequency(self):
+        if self.enable_local:
+            # return the local result directly
+            return self.commit_frequency_local
+        else:
+            # return the online commit_frequency result
+            return super(GitHubRepository, self).commit_frequency
 
     # TODO(yikun): Re-implementation in GitLocalRepo
     def get_first_commit_time(self):
