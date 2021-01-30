@@ -169,6 +169,10 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
         self.enable_local = enable_local
         self.retry = int(config.get('global', 'retry'))
 
+    @property
+    def name(self):
+        return self._repo.name.lower()
+
     # TODO(yikun): Re-implementation in GitLocalRepo
     def get_first_commit_time(self):
         def _parse_links(response):
