@@ -50,7 +50,7 @@ input[type=submit] {
     height: 32px;
 }
 
-input[type=text] {
+input[type=url] {
     width: 430px;
     height: 32px;
 }
