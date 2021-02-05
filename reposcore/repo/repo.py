@@ -222,9 +222,10 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
         return None
 
     def _github_query_match(self):
-        DEPENDENTS_REGEX = re.compile(b'.*[^0-9,]([0-9,]+).*commit result', re.DOTALL)
-        # TODO: Take package manager dependency trees into account. If we decide
-        # to replace this, then find a solution for C/C++ as well.
+        dependents_regex = re.compile(
+            b'.*[^0-9,]([0-9,]+).*commit result', re.DOTALL)
+        # TODO: Take package manager dependency trees into account. If we
+        # decide to replace this, then find a solution for C/C++ as well.
         parsed_url = urllib.parse.urlparse(self.url)
         repo_name = parsed_url.path.strip('/')
         dependents_url = (
@@ -236,7 +237,7 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
                 content = result.content
                 break
             time.sleep(2**i)
-        return DEPENDENTS_REGEX.match(content)
+        return dependents_regex.match(content)
 
     @property
     def dependents_count(self):
