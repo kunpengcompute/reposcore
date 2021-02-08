@@ -221,11 +221,13 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
 
         return None
 
-    def _github_query_match(self):
+    @property
+    def dependents_count(self):
+        # TODO: Take package manager dependency trees into account. If we decide
+        # to replace this, then find a solution for C/C++ as well.
         dependents_regex = re.compile(
             b'.*[^0-9,]([0-9,]+).*commit result', re.DOTALL)
-        # TODO: Take package manager dependency trees into account. If we
-        # decide to replace this, then find a solution for C/C++ as well.
+        match = None
         parsed_url = urllib.parse.urlparse(self.url)
         repo_name = parsed_url.path.strip('/')
         dependents_url = (
@@ -235,18 +237,11 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
             result = requests.get(dependents_url)
             if result.status_code == 200:
                 content = result.content
-                break
+                match = dependents_regex.match(content)
+                # Break only when get 200 status with match result
+                if match:
+                    break
             time.sleep(2**i)
-        return dependents_regex.match(content)
-
-    @property
-    def dependents_count(self):
-        # do query retries to make sure result correct
-        for i in range(self.retry):
-            match = self._github_query_match()
-            if match:
-                break
-        # return 0 dependency when we make sure no match
         if not match:
             return 0
         return int(match.group(1).replace(b',', b''))
