@@ -223,8 +223,8 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
 
     @property
     def dependents_count(self):
-        # TODO: Take package manager dependency trees into account. If we decide
-        # to replace this, then find a solution for C/C++ as well.
+        # TODO: Take package manager dependency trees into account. If we
+        # decide to replace this, then find a solution for C/C++ as well.
         dependents_regex = re.compile(
             b'.*[^0-9,]([0-9,]+).*commit result', re.DOTALL)
         match = None
