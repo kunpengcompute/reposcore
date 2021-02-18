@@ -221,6 +221,31 @@ class GitHubRepository(cs_run.GitHubRepository, GitLocalRepo):
 
         return None
 
+    @property
+    def dependents_count(self):
+        # TODO: Take package manager dependency trees into account. If we
+        # decide to replace this, then find a solution for C/C++ as well.
+        dependents_regex = re.compile(
+            b'.*[^0-9,]([0-9,]+).*commit result', re.DOTALL)
+        match = None
+        parsed_url = urllib.parse.urlparse(self.url)
+        repo_name = parsed_url.path.strip('/')
+        dependents_url = (
+            f'https://github.com/search?q="{repo_name}"&type=commits')
+        content = b''
+        for i in range(self.retry):
+            result = requests.get(dependents_url)
+            if result.status_code == 200:
+                content = result.content
+                match = dependents_regex.match(content)
+                # Break only when get 200 status with match result
+                if match:
+                    break
+            time.sleep(2**i)
+        if not match:
+            return 0
+        return int(match.group(1).replace(b',', b''))
+
 
 # TODO: Remove all cs_run related code in future
 class GitLabRepository(cs_run.GitLabRepository, GitLocalRepo):
