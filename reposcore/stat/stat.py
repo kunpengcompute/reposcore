@@ -67,7 +67,7 @@ class Stat():
             'language': self.repo.language,
         }
         for param in all_params:
-            result_dict[param] = return_dict[param]
+            result_dict[param] = return_dict.get(param, '0')
         return result_dict
 
     def get_stats(self):
